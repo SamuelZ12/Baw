@@ -1,47 +1,82 @@
-// CircleSwingShot.tsx
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
+import Circle from '../components/circle'; // Import the Circle component from circle.tsx
 
-const CircleSwingShot: React.FC = () => {
-  const [isDragging, setIsDragging] = useState(false);
+const SwingShotCircle: React.FC = () => {
   const [position, setPosition] = useState({ x: 150, y: 300 });
-  const circleRef = useRef<HTMLDivElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [velocity, setVelocity] = useState({ x: 0, y: 0 });
+  const [initialClick, setInitialClick] = useState({ x: 0, y: 0 });
+
+  // ...
+
+const circleStyle: React.CSSProperties = {
+  backgroundColor: 'purple',
+  width: '100px',
+  height: '100px',
+  borderRadius: '50%',
+  position: 'absolute',
+  transform: `translate(${position.x}px, ${position.y}px)`,
+  cursor: isDragging ? 'grabbing' : 'grab',
+};
 
   const startDragging = (e: React.MouseEvent) => {
     setIsDragging(true);
+    setInitialClick({ x: e.clientX, y: e.clientY });
   };
 
-  const drag = (e: React.MouseEvent) => {
-    if (isDragging && circleRef.current) {
-      const rect = circleRef.current.getBoundingClientRect();
-      const offsetX = e.clientX - rect.left - rect.width / 2;
-      const offsetY = e.clientY - rect.top - rect.height / 2;
-      setPosition((prevPosition) => ({
-        x: prevPosition.x + offsetX,
-        y: prevPosition.y + offsetY,
-      }));
+  const endDragging = () => {
+    if (isDragging) {
+      setIsDragging(false);
+
+      // Calculate the velocity based on the drag distance
+      const dx = initialClick.x - position.x;
+      const dy = initialClick.y - position.y;
+      setVelocity({ x: -dx / 10, y: -dy / 10 }); // Adjust the divisor for velocity control
     }
   };
 
-  const release = () => {
-    setIsDragging(false);
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (isDragging) {
+      // Move the circle along with the mouse while dragging
+      const dx = e.clientX - initialClick.x;
+      const dy = e.clientY - initialClick.y;
+      setPosition((prevPosition) => ({
+        x: prevPosition.x + dx,
+        y: prevPosition.y + dy,
+      }));
+      setInitialClick({ x: e.clientX, y: e.clientY });
+    }
   };
 
-  return (
-    <div
-      ref={circleRef}
-      style={{
-        backgroundColor: 'purple',
-        width: '100px',
-        height: '100px',
-        borderRadius: '50%',
-        position: 'absolute',
-        transform: `translate(${position.x}px, ${position.y}px)`,
-      }}
-      onMouseDown={startDragging}
-      onMouseMove={drag}
-      onMouseUp={release}
-    ></div>
-  );
-};
+  const updatePosition = () => {
+    if (!isDragging) {
+      setPosition((prevPosition) => ({
+        x: prevPosition.x + velocity.x,
+        y: prevPosition.y + velocity.y,
+      }));
 
-export default CircleSwingShot;
+      // Apply friction (deceleration) gradually
+      setVelocity((prevVelocity) => ({
+        x: prevVelocity.x * 0.98, // Adjust the friction coefficient as needed
+        y: prevVelocity.y * 0.98,
+      }));
+    }
+    requestAnimationFrame(updatePosition);
+  };
+
+  // Start the animation loop
+  updatePosition();
+
+  return (
+    <div>
+      <Circle /> {/* Use the Circle component */}
+      <div
+        style={circleStyle}
+        onMouseDown={startDragging}
+        onMouseUp={endDragging}
+        onMouseMove={handleMouseMove}
+      ></div>
+    </div>
+  );
+
+export default SwingShotCircle;
